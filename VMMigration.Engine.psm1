@@ -994,8 +994,12 @@ function Send-MigPackage {
       consente la RIPRESA di un trasferimento interrotto.
     #>
     param([Parameter(Mandatory)][string]$PackagePath, [Parameter(Mandatory)][string]$TargetHost, [int]$Port = $script:DefaultTcpPort, [Parameter(Mandatory)][string]$Code)
-    $PackagePath = (Resolve-Path -LiteralPath $PackagePath).Path.TrimEnd('\')
+    # Normalizza a nome lungo: %TEMP% o percorsi 8.3 (es. RUNNER~1) non coinciderebbero con i FullName enumerati
+    $PackagePath = (Get-Item -LiteralPath $PackagePath).FullName.TrimEnd('\')
     $files = @(Get-ChildItem -LiteralPath $PackagePath -Recurse -File -Force)
+    if ($files.Count -gt 0 -and -not $files[0].FullName.StartsWith($PackagePath, [System.StringComparison]::OrdinalIgnoreCase)) {
+        try { $PackagePath = (New-Object -ComObject Scripting.FileSystemObject).GetFolder($PackagePath).Path.TrimEnd('\') } catch {}
+    }
     $total = ($files | Measure-Object -Property Length -Sum).Sum; if (-not $total) { $total = 1 }
     Write-MigLog -Level STEP -Message ("Invio {0} file ({1}) a {2}:{3}" -f $files.Count, (Format-MigBytes $total), $TargetHost, $Port)
     $tcp = New-Object System.Net.Sockets.TcpClient
