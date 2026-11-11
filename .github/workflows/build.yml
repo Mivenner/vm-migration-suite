@@ -1,0 +1,50 @@
+name: Build VM Migration Suite
+
+on:
+  push:
+    branches: [ main ]
+    tags: [ 'v*' ]
+  workflow_dispatch:
+
+jobs:
+  build:
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Verifica sintassi
+        shell: pwsh
+        run: .\Tests\Test-Syntax.ps1
+
+      - name: Test motore (protocollo LAN in loopback)
+        shell: pwsh
+        run: .\Tests\Test-Engine.Unit.ps1
+
+      - name: Installa Inno Setup 6
+        shell: pwsh
+        run: choco install innosetup --no-progress -y
+
+      - name: Compila exe + installer (Windows PowerShell 5.1 per PS2EXE)
+        shell: powershell
+        run: |
+          Set-ExecutionPolicy -Scope Process Bypass -Force
+          $v = if ($env:GITHUB_REF -like 'refs/tags/v*') { $env:GITHUB_REF.Substring(11) } else { '3.0.' + $env:GITHUB_RUN_NUMBER }
+          .\Build.ps1 -Version $v
+          Compress-Archive -Path dist\* -DestinationPath "dist\VMMigrationSuite_Portable_$v.zip" -Force
+
+      - name: Carica artefatti
+        uses: actions/upload-artifact@v4
+        with:
+          name: VMMigrationSuite
+          path: |
+            dist/VMMigrationSuite.exe
+            dist/VMMigrationSuite_Portable_*.zip
+            dist/VMMigrationSuite_Setup_*.exe
+
+      - name: Release (solo per tag v*)
+        if: startsWith(github.ref, 'refs/tags/v')
+        uses: softprops/action-gh-release@v2
+        with:
+          files: |
+            dist/VMMigrationSuite_Portable_*.zip
+            dist/VMMigrationSuite_Setup_*.exe
