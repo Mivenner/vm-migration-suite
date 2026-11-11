@@ -9,6 +9,7 @@
 $ErrorActionPreference = 'Stop'
 $root = Split-Path -Parent $PSScriptRoot
 Import-Module (Join-Path $root 'VMMigration.Engine.psm1') -Force
+Initialize-MigLogging -OnLog { param($l, $m) Write-Host "  [$l] $m" }
 $fail = 0
 function Assert($cond, $msg) { if ($cond) { Write-Host "PASS $msg" -ForegroundColor Green } else { Write-Host "FAIL $msg" -ForegroundColor Red; $script:fail++ } }
 
@@ -29,6 +30,9 @@ $rs.AddScript({ param($e, $d, $c) Import-Module $e -Force; Receive-MigPackage -D
 $h = $rs.BeginInvoke(); Start-Sleep 1
 Send-MigPackage -PackagePath $pkg -TargetHost '127.0.0.1' -Port 18888 -Code $code
 $out = $rs.EndInvoke($h)
+$rs.Streams.Error | ForEach-Object { Write-Host "RECEIVER ERROR: $_" -ForegroundColor Red }
+Write-Host "Receive ha restituito: $out"
+Get-ChildItem -Path $recv -Recurse -Force -ErrorAction SilentlyContinue | ForEach-Object { Write-Host "  recv: $($_.FullName) ($($_.Length))" }
 $a = Get-FileHash (Join-Path $pkg 'Data\Documents\big.bin'); $b = Get-FileHash (Join-Path $recv 'VMIG_test\Data\Documents\big.bin')
 Assert ($a.Hash -eq $b.Hash) 'Trasferimento LAN: hash identico'
 Assert ($out -like '*VMIG_test') 'Receive-MigPackage ritorna il percorso pacchetto'
