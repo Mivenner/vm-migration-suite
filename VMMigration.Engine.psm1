@@ -24,7 +24,7 @@ $ErrorActionPreference = 'Stop'
 # ------------------------------------------------------------------------------
 #  COSTANTI
 # ------------------------------------------------------------------------------
-$script:MigVersion      = '3.0.0'
+$script:MigVersion      = '3.0.3'
 $script:PackageMagic    = 'VMIG'
 $script:ManifestName    = 'manifest.json'
 $script:DefaultTcpPort  = 8888

@@ -302,7 +302,7 @@
         <Grid Grid.Row="2" Margin="0,12,0,0">
             <Grid.ColumnDefinitions><ColumnDefinition Width="Auto"/><ColumnDefinition Width="*"/><ColumnDefinition Width="Auto"/></Grid.ColumnDefinitions>
             <Button Name="btnBack" Content="Indietro" IsEnabled="False"/>
-            <TextBlock Name="lblFooter" Grid.Column="1" Text="vm technology - VM Migration Suite v3.0.2" Style="{StaticResource Hint}" VerticalAlignment="Center" Margin="14,0"/>
+            <TextBlock Name="lblFooter" Grid.Column="1" Text="vm technology - VM Migration Suite v3.0.3" Style="{StaticResource Hint}" VerticalAlignment="Center" Margin="14,0"/>
             <Button Name="btnNext" Grid.Column="2" Content="Avanti" Style="{StaticResource Primary}" Padding="24,8"/>
         </Grid>
     </Grid>
