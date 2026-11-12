@@ -24,7 +24,11 @@ VM-Migration-Suite\
 ## Tre modi per distribuirla
 1. **Portable dai sorgenti (nessuna compilazione)**: copia la cartella e lancia `Avvia-GUI.cmd`. Nessun exe, nessun avviso SmartScreen.
 2. **Exe portable**: `.\Build.ps1 -SkipInstaller` → `dist\VMMigrationSuite_Portable_<ver>.zip` (richiede solo il modulo ps2exe, installato in automatico).
-3. **Compilazione automatica su GitHub**: con `.github\workflows\build.yml` ogni push su `main` produce exe, zip portable e `Setup.exe` (scaricabili da *Actions → Artifacts*); un tag `v3.0.2` crea una *Release* con i file allegati. Non serve avere PS2EXE né Inno Setup sul proprio PC.
+3. **Link fissi all'ultima build** (release `latest`, aggiornata a ogni push su `main`):
+   - Portable: <https://github.com/Mivenner/vm-migration-suite/releases/latest/download/VMMigrationSuite_Portable.zip>
+   - Installer: <https://github.com/Mivenner/vm-migration-suite/releases/latest/download/VMMigrationSuite_Setup.exe>
+   - Senza browser: `Aggiorna-VMMigration.cmd` (usa GitHub CLI: `winget install GitHub.cli`, poi `gh auth login` una volta sola).
+4. **Compilazione automatica su GitHub**: con `.github\workflows\build.yml` ogni push su `main` produce exe, zip portable e `Setup.exe` (scaricabili da *Actions → Artifacts*); un tag `v3.0.2` crea una *Release* con i file allegati. Non serve avere PS2EXE né Inno Setup sul proprio PC.
 
 ## Avvio rapido
 **Senza compilare**: doppio clic su `Avvia-GUI.cmd` (imposta da solo `-ExecutionPolicy Bypass`), oppure

@@ -6,6 +6,9 @@ on:
     tags: [ 'v*' ]
   workflow_dispatch:
 
+permissions:
+  contents: write
+
 jobs:
   build:
     runs-on: windows-latest
@@ -31,6 +34,10 @@ jobs:
           $v = if ($env:GITHUB_REF -like 'refs/tags/v*') { $env:GITHUB_REF.Substring(11) } else { '3.0.' + $env:GITHUB_RUN_NUMBER }
           .\Build.ps1 -Version $v
           Compress-Archive -Path dist\* -DestinationPath "dist\VMMigrationSuite_Portable_$v.zip" -Force
+          # Copie con nome fisso per il link stabile ".../releases/latest/download/..."
+          Copy-Item "dist\VMMigrationSuite_Portable_$v.zip" dist\VMMigrationSuite_Portable.zip -Force
+          Get-ChildItem dist\VMMigrationSuite_Setup_*.exe | Select-Object -First 1 | Copy-Item -Destination dist\VMMigrationSuite_Setup.exe -Force
+          "VERSIONE=$v" | Out-File -FilePath $env:GITHUB_ENV -Append -Encoding utf8
 
       - name: Carica artefatti
         uses: actions/upload-artifact@v4
@@ -40,6 +47,25 @@ jobs:
             dist/VMMigrationSuite.exe
             dist/VMMigrationSuite_Portable_*.zip
             dist/VMMigrationSuite_Setup_*.exe
+
+      - name: Aggiorna release "latest" (ultima build di main)
+        if: github.ref == 'refs/heads/main'
+        shell: pwsh
+        run: |
+          git config user.name "github-actions"; git config user.email "actions@github.com"
+          git tag -f latest; git push -f origin latest
+
+      - name: Pubblica/aggiorna release "latest"
+        if: github.ref == 'refs/heads/main'
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: latest
+          name: "Ultima build (${{ env.VERSIONE }})"
+          body: "Build automatica dall'ultimo commit su main. Link fissi: VMMigrationSuite_Portable.zip (exe + file, nessuna installazione) e VMMigrationSuite_Setup.exe (installer)."
+          prerelease: true
+          files: |
+            dist/VMMigrationSuite_Portable.zip
+            dist/VMMigrationSuite_Setup.exe
 
       - name: Release (solo per tag v*)
         if: startsWith(github.ref, 'refs/tags/v')
