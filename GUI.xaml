@@ -209,8 +209,9 @@
                         <TextBlock Text="Cosa ripristinare" Style="{StaticResource H2}"/>
                         <StackPanel Name="pnlImportSets"/>
                         <CheckBox Name="chkImpRegistry" IsChecked="True" Content="Registro utente (desktop, Esplora file, Office, app) con rimappatura SID/percorso"/>
+                        <CheckBox Name="chkImpOutlookProfile" IsChecked="False" Content="Importa anche il profilo Outlook (solo se stessa versione di Office; altrimenti Outlook lo ricrea da solo - consigliato)"/>
                         <CheckBox Name="chkImpWifi" IsChecked="True" Content="Profili Wi-Fi"/>
-                        <CheckBox Name="chkImpPrinters" IsChecked="True" Content="Stampanti di rete / IP e predefinita"/>
+                        <CheckBox Name="chkImpPrinters" IsChecked="True" Content="Stampanti: driver, IP, condivise (al primo accesso) e predefinita"/>
                         <CheckBox Name="chkImpDrives" IsChecked="True" Content="Unita' di rete mappate"/>
                         <CheckBox Name="chkImpWallpaper" IsChecked="True" Content="Sfondo del desktop"/>
                         <CheckBox Name="chkImpSkipNewer" IsChecked="True" Content="Non sovrascrivere file piu' recenti gia' presenti a destinazione"/>
@@ -302,7 +303,7 @@
         <Grid Grid.Row="2" Margin="0,12,0,0">
             <Grid.ColumnDefinitions><ColumnDefinition Width="Auto"/><ColumnDefinition Width="*"/><ColumnDefinition Width="Auto"/></Grid.ColumnDefinitions>
             <Button Name="btnBack" Content="Indietro" IsEnabled="False"/>
-            <TextBlock Name="lblFooter" Grid.Column="1" Text="vm technology - VM Migration Suite v3.0.3" Style="{StaticResource Hint}" VerticalAlignment="Center" Margin="14,0"/>
+            <TextBlock Name="lblFooter" Grid.Column="1" Text="vm technology - VM Migration Suite v3.1.0" Style="{StaticResource Hint}" VerticalAlignment="Center" Margin="14,0"/>
             <Button Name="btnNext" Grid.Column="2" Content="Avanti" Style="{StaticResource Primary}" Padding="24,8"/>
         </Grid>
     </Grid>

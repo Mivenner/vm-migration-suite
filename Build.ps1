@@ -7,7 +7,7 @@
     Output: .\dist\VMMigrationSuite.exe + file di supporto, .\dist\VMMigrationSuite_Setup_3.0.0.exe
 #>
 [CmdletBinding()]
-param([switch]$SkipInstaller, [string]$Version = '3.0.3')
+param([switch]$SkipInstaller, [string]$Version = '3.1.0')
 
 $ErrorActionPreference = 'Stop'
 $src  = $PSScriptRoot

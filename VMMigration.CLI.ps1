@@ -36,6 +36,7 @@ param(
     [securestring]$Password,
     [switch]$Administrator,
     [switch]$Overwrite,              # importazione: sovrascrivi anche i file piu' recenti
+    [switch]$OutlookProfile,         # importazione: importa anche il profilo MAPI di Outlook (stessa versione Office)
     [string]$TargetHost,
     [int]$Port = 8888,
     [string]$Code,
@@ -85,7 +86,7 @@ try {
         'Import' {
             if (-not $Package -or -not $TargetUser) { throw 'Servono -Package e -TargetUser.' }
             if ($CreateUser) { if (-not $Password) { throw '-CreateUser richiede -Password (SecureString).' }; New-MigLocalUser -Name $TargetUser -Password $Password -Administrator $Administrator.IsPresent | Out-Null }
-            $r = Start-MigImport -PackagePath $Package -TargetUser $TargetUser -DataSetIds $DataSets -SkipNewer (-not $Overwrite)
+            $r = Start-MigImport -PackagePath $Package -TargetUser $TargetUser -DataSetIds $DataSets -SkipNewer (-not $Overwrite) -RestoreOutlookProfile $OutlookProfile.IsPresent
             Write-Host ("`nImportazione completata su {0}: {1}, registro {2} ok / {3} falliti, errori copia {4}" -f $r.Destinazione.Account, (Format-MigBytes $r.ByteTotali), $r.RegistroOk, $r.RegistroFalliti, @($r.Errori).Count) -ForegroundColor Cyan
             $r.Note | ForEach-Object { Write-Host " - $_" -ForegroundColor Yellow }
         }

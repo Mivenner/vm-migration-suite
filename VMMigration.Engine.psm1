@@ -24,7 +24,7 @@ $ErrorActionPreference = 'Stop'
 # ------------------------------------------------------------------------------
 #  COSTANTI
 # ------------------------------------------------------------------------------
-$script:MigVersion      = '3.0.3'
+$script:MigVersion      = '3.1.0'
 $script:PackageMagic    = 'VMIG'
 $script:ManifestName    = 'manifest.json'
 $script:DefaultTcpPort  = 8888
@@ -47,7 +47,7 @@ $script:DataSets = @(
     [pscustomobject]@{ Id='Firefox';    Nome='Mozilla Firefox';              Percorsi=@('AppData\Roaming\Mozilla\Firefox','AppData\Local\Mozilla\Firefox'); Default=$true; Gruppo='Browser' }
     [pscustomobject]@{ Id='Brave';      Nome='Brave';                        Percorsi=@('AppData\Local\BraveSoftware\Brave-Browser\User Data'); Default=$false; Gruppo='Browser' }
     [pscustomobject]@{ Id='Opera';      Nome='Opera';                        Percorsi=@('AppData\Roaming\Opera Software');            Default=$false; Gruppo='Browser' }
-    [pscustomobject]@{ Id='OutlookPst'; Nome='Outlook - archivi PST (no OST)'; Percorsi=@('Documents\Outlook Files','AppData\Local\Microsoft\Outlook','Documenti\File di Outlook'); Default=$true; Gruppo='Office / Posta'; Filtri=@('*.pst','*.nk2','*.srs','*.xml') }
+    [pscustomobject]@{ Id='OutlookPst'; Nome='Outlook - archivi PST (no OST)'; Percorsi=@('Documents\Outlook Files','AppData\Local\Microsoft\Outlook','Documenti\File di Outlook'); Default=$true; Gruppo='Office / Posta'; Filtri=@('*.pst','*.nk2','*.srs','*.xml','*.dat') }
     [pscustomobject]@{ Id='OfficeUser'; Nome='Office - firme, modelli, dizionari, QuickParts'; Percorsi=@('AppData\Roaming\Microsoft\Signatures','AppData\Roaming\Microsoft\Templates','AppData\Roaming\Microsoft\UProof','AppData\Roaming\Microsoft\Document Building Blocks','AppData\Roaming\Microsoft\Stationery','AppData\Roaming\Microsoft\Proof','AppData\Roaming\Microsoft\Excel\XLSTART','AppData\Roaming\Microsoft\AddIns','AppData\Roaming\Microsoft\Office'); Default=$true; Gruppo='Office / Posta' }
     [pscustomobject]@{ Id='Thunderbird';Nome='Mozilla Thunderbird';          Percorsi=@('AppData\Roaming\Thunderbird');               Default=$false; Gruppo='Office / Posta' }
     [pscustomobject]@{ Id='StickyNotes';Nome='Sticky Notes';                 Percorsi=@('AppData\Local\Packages\Microsoft.MicrosoftStickyNotes_8wekyb3d8bbwe\LocalState'); Default=$true; Gruppo='App di Windows' }
@@ -79,7 +79,7 @@ $script:RegistryKeys = @(
     @{ Id='Desktop';   Nome='Desktop, schermo, mouse, tastiera, lingua';   Chiavi=@('Control Panel\Desktop','Control Panel\Mouse','Control Panel\Keyboard','Control Panel\International','Control Panel\Accessibility','Control Panel\Colors','Control Panel\Cursors','Control Panel\Sound') }
     @{ Id='Explorer';  Nome='Esplora file (viste, opzioni cartelle, Start)'; Chiavi=@('Software\Microsoft\Windows\CurrentVersion\Explorer\Advanced','Software\Microsoft\Windows\CurrentVersion\Explorer\User Shell Folders','Software\Microsoft\Windows\CurrentVersion\Explorer\Shell Folders','Software\Microsoft\Windows\CurrentVersion\Explorer\Taskband','Software\Microsoft\Windows\CurrentVersion\Explorer\StartPage','Software\Microsoft\Windows\CurrentVersion\Explorer\Streams','Software\Microsoft\Windows\CurrentVersion\Explorer\StuckRects3','Software\Microsoft\Windows\CurrentVersion\Explorer\RecentDocs','Software\Microsoft\Windows\CurrentVersion\Explorer\TypedPaths','Software\Microsoft\Windows\CurrentVersion\Explorer\FileExts','Software\Microsoft\Windows\CurrentVersion\Themes','Software\Microsoft\Windows\CurrentVersion\Themes\Personalize','Software\Classes\Local Settings\Software\Microsoft\Windows\Shell\Bags','Software\Classes\Local Settings\Software\Microsoft\Windows\Shell\BagMRU') }
     @{ Id='Network';   Nome='Unita'' di rete mappate';                     Chiavi=@('Network','Software\Microsoft\Windows\CurrentVersion\Explorer\Map Network Drive MRU','Software\Microsoft\Windows\CurrentVersion\Explorer\MountPoints2') }
-    @{ Id='Printers';  Nome='Stampanti di rete e predefinita';              Chiavi=@('Printers\Connections','Printers\Settings','Software\Microsoft\Windows NT\CurrentVersion\Windows','Software\Microsoft\Windows NT\CurrentVersion\Devices','Software\Microsoft\Windows NT\CurrentVersion\PrinterPorts') }
+    @{ Id='Printers';  Nome='Stampanti di rete e predefinita';              Chiavi=@('Printers\Connections','Printers\Settings','Printers\DevModePerUser','Printers\DevModes2','Software\Microsoft\Windows NT\CurrentVersion\Windows','Software\Microsoft\Windows NT\CurrentVersion\Devices','Software\Microsoft\Windows NT\CurrentVersion\PrinterPorts') }
     @{ Id='Office';    Nome='Microsoft Office (opzioni, account, MRU)';     Chiavi=@('Software\Microsoft\Office','Software\Microsoft\Shared Tools','Software\Microsoft\VBA') }
     @{ Id='Apps';      Nome='Impostazioni applicazioni comuni';             Chiavi=@('Software\7-Zip','Software\WinRAR','Software\Notepad++','Software\Adobe','Software\TeamViewer','Software\Google','Software\Microsoft\Edge','Software\Mozilla','Software\VideoLAN','Software\Microsoft\Notepad','Software\Microsoft\Windows\CurrentVersion\Run','Software\Microsoft\Windows\CurrentVersion\Internet Settings','Software\Microsoft\Windows\CurrentVersion\Explorer\Shell Folders','Software\Microsoft\Windows\CurrentVersion\Search','Software\Microsoft\Windows\CurrentVersion\CloudStore','Software\Microsoft\Windows\CurrentVersion\Notifications\Settings','Software\Microsoft\Windows\CurrentVersion\Explorer\Accent','Software\Microsoft\Windows\CurrentVersion\Lock Screen','Software\Microsoft\Windows\DWM','Software\Microsoft\InputPersonalization','Software\Microsoft\TabletTip','Keyboard Layout','Environment','AppEvents\Schemes','Console') }
 )
@@ -395,9 +395,21 @@ function Import-MigRegistryFile {
         [Parameter(Mandatory)][string]$NewRoot,
         [string]$OldSID, [string]$NewSID,
         [string]$OldProfilePath, [string]$NewProfilePath,
-        [string]$OldUserName, [string]$NewUserName
+        [string]$OldUserName, [string]$NewUserName,
+        [string[]]$ExcludeKeyPatterns      # regex sui percorsi chiave da NON importare (es. '\\Outlook\\Profiles')
     )
     $text = Get-Content -LiteralPath $RegFile -Raw -Encoding Unicode
+    if ($ExcludeKeyPatterns) {
+        # Un file .reg e' una sequenza di sezioni "[chiave]" + valori: rimuovo le sezioni che corrispondono ai pattern
+        $parts = [regex]::Split($text, '(?m)^(?=\[)')
+        $keep = New-Object System.Collections.Generic.List[string]
+        foreach ($sec in $parts) {
+            $m = [regex]::Match($sec, '^\[(-?)([^\]]+)\]')
+            if ($m.Success -and ($ExcludeKeyPatterns | Where-Object { $m.Groups[2].Value -match $_ })) { continue }
+            $keep.Add($sec)
+        }
+        $text = ($keep -join '')
+    }
     $text = $text -replace [regex]::Escape("[$OldRoot"), "[$NewRoot"
     $text = $text -replace [regex]::Escape("[-$OldRoot"), "[-$NewRoot"
     if ($OldSID -and $NewSID -and $OldSID -ne $NewSID) { $text = $text -replace [regex]::Escape($OldSID), $NewSID }
@@ -487,9 +499,31 @@ function Export-MigSettings {
     # Stampanti (locali/IP e connessioni di rete dell'utente)
     try {
         $printers = @()
+        $virtualPorts = '^(PORTPROMPT:|nul:|SHRFAX:|XPSPort:|FILE:|Microsoft\.Office\.OneNote|LPT\d|COM\d)'
+        $drvFolder = Join-Path $OutFolder 'PrinterDrivers'
+        $winDrivers = $null
         foreach ($pr in @($(if ($offline) { @() } else { Get-Printer -ErrorAction SilentlyContinue }))) {
+            if ($pr.PortName -match $virtualPorts -or $pr.Name -match '^(Microsoft Print to PDF|Microsoft XPS Document Writer|Fax|OneNote|Send To OneNote|Adobe PDF|Foxit)') { continue }
+            if ($pr.Type -eq 'Connection') { continue }   # le connessioni di rete sono gestite dall'hive utente
             $port = $null; try { $port = Get-PrinterPort -Name $pr.PortName -ErrorAction SilentlyContinue } catch {}
-            $printers += [pscustomobject]@{ Nome = $pr.Name; Driver = $pr.DriverName; Porta = $pr.PortName; Tipo = [string]$pr.Type; Condivisa = $pr.Shared; Server = $pr.ComputerName; IndirizzoIP = $(if ($port -and $port.PSObject.Properties['PrinterHostAddress']) { $port.PrinterHostAddress } else { $null }); Predefinita = $false }
+            $ip = $null; if ($port -and $port.PSObject.Properties['PrinterHostAddress']) { $ip = $port.PrinterHostAddress }
+            $tipoPorta = if ($ip) { 'IP' } elseif ($pr.PortName -like 'WSD-*') { 'WSD' } elseif ($pr.PortName -like 'USB*') { 'USB' } else { 'Altro' }
+            # Esporto il pacchetto driver (INF + file) con pnputil per reinstallarlo sul PC di destinazione
+            $drvExport = $null
+            try {
+                $drv = Get-PrinterDriver -Name $pr.DriverName -ErrorAction Stop | Select-Object -First 1
+                if ($drv.InfPath -and $drv.InfPath -notlike '*\System32\*ntprint.inf*' -and $drv.InfPath -notlike '*\prnms*.inf*') {
+                    if ($null -eq $winDrivers) { $winDrivers = @(Get-WindowsDriver -Online -ErrorAction SilentlyContinue) }
+                    $pub = $winDrivers | Where-Object { $_.OriginalFileName -eq $drv.InfPath } | Select-Object -First 1
+                    if ($pub) {
+                        $dest = Join-Path $drvFolder ($pub.Driver -replace '\.inf$', '')
+                        if (-not (Test-Path -LiteralPath $dest)) { New-Item -ItemType Directory -Path $dest -Force | Out-Null; $null = & pnputil.exe /export-driver $pub.Driver "$dest" 2>&1 }
+                        if (Get-ChildItem -LiteralPath $dest -Filter *.inf -ErrorAction SilentlyContinue) { $drvExport = (Split-Path -Leaf $dest) }
+                    }
+                }
+            } catch {}
+            $printers += [pscustomobject]@{ Nome = $pr.Name; Driver = $pr.DriverName; Porta = $pr.PortName; TipoPorta = $tipoPorta; Tipo = [string]$pr.Type; Condivisa = $pr.Shared; IndirizzoIP = $ip; PacchettoDriver = $drvExport; Posizione = $pr.Location; Commento = $pr.Comment }
+            Write-MigLog ("Stampante '{0}': porta {1} ({2}), driver '{3}'{4}" -f $pr.Name, $pr.PortName, $tipoPorta, $pr.DriverName, $(if ($drvExport) { ", pacchetto driver esportato" } elseif ($tipoPorta -eq 'USB') { " - USB: andra' ricollegata (driver esportato se possibile)" } else { " - driver di sistema" }))
         }
         $connKey = "Registry::$($Hive.Root)\Printers\Connections"
         $netPrinters = @()
@@ -566,15 +600,29 @@ function Export-MigSettings {
         Write-MigLog -Level OK -Message "Sistema: $($sys.SO) build $($sys.Build) - key $($pk.Origine)"
     } catch { Write-MigLog -Level WARN -Message "Sistema: $($_.Exception.Message)" }
 
-    # Account Outlook (solo inventario: le password restano in Credential Manager e NON sono migrabili)
+    # Account Outlook: inventario profili + indirizzi (le password restano in Credential Manager e NON sono migrabili)
     try {
         $prof = "Registry::$($Hive.Root)\Software\Microsoft\Office\16.0\Outlook\Profiles"
         if (Test-Path -LiteralPath $prof) {
-            $names = @(Get-ChildItem -LiteralPath $prof | Select-Object -ExpandProperty PSChildName)
-            $names | ConvertTo-Json | Set-Content -LiteralPath (Join-Path $OutFolder 'outlook-profiles.json') -Encoding UTF8
-            Write-MigLog -Level INFO -Message "Outlook: profili trovati: $($names -join ', '). Le password andranno reinserite al primo avvio."
+            $inv = @()
+            foreach ($pk in Get-ChildItem -LiteralPath $prof) {
+                $accounts = @()
+                $accKey = Join-Path $pk.PSPath '9375CFF0413111d3B88A00104B2A6676'
+                if (Test-Path -LiteralPath $accKey) {
+                    foreach ($ak in Get-ChildItem -LiteralPath $accKey) {
+                        $v = Get-ItemProperty -LiteralPath $ak.PSPath
+                        $get = { param($n) if ($v.PSObject.Properties[$n]) { $b = $v.$n; if ($b -is [byte[]]) { ([System.Text.Encoding]::Unicode.GetString($b)).TrimEnd([char]0) } else { [string]$b } } }
+                        $email = & $get 'Email'; $name = & $get 'Account Name'; $svc = & $get 'clsid'
+                        if ($email -or ($name -and $name -notmatch '^(Outlook Address Book|Rubrica)')) { $accounts += [pscustomobject]@{ Nome = $name; Email = $email; Tipo = $(if ($v.PSObject.Properties['Exchange Server'] -or $v.PSObject.Properties['001f6602']) { 'Exchange/M365' } elseif ($v.PSObject.Properties['IMAP Server']) { 'IMAP' } elseif ($v.PSObject.Properties['POP3 Server']) { 'POP3' } else { 'n/d' }) } }
+                    }
+                }
+                $inv += [pscustomobject]@{ Profilo = $pk.PSChildName; Account = $accounts }
+            }
+            $inv | ConvertTo-Json -Depth 4 | Set-Content -LiteralPath (Join-Path $OutFolder 'outlook-accounts.json') -Encoding UTF8
+            $tot = ($inv | ForEach-Object { @($_.Account).Count } | Measure-Object -Sum).Sum
+            Write-MigLog -Level INFO -Message ("Outlook: {0} profili, {1} account ({2}). Password da reinserire al primo avvio." -f $inv.Count, $tot, (($inv | ForEach-Object { $_.Account } | ForEach-Object { $_.Email } | Where-Object { $_ }) -join ', '))
         }
-    } catch {}
+    } catch { Write-MigLog -Level WARN -Message "Outlook inventario: $($_.Exception.Message)" }
 
     return $summary
 }
@@ -772,7 +820,8 @@ function Start-MigImport {
         [bool]$RestorePrinters = $true,
         [bool]$RestoreDrives = $true,
         [bool]$RestoreWallpaper = $true,
-        [bool]$FixPermissions = $true
+        [bool]$FixPermissions = $true,
+        [bool]$RestoreOutlookProfile = $false   # solo tra PC con la stessa versione di Office; altrimenti Outlook ricrea il profilo
     )
     if (-not (Test-MigAdmin)) { throw 'Sono necessari privilegi di amministratore.' }
     $m = Read-MigManifest -PackagePath $PackagePath
@@ -828,12 +877,19 @@ function Start-MigImport {
             foreach ($rf in @($m.Registro)) {
                 $file = Join-Path (Join-Path $PackagePath 'Registry') $rf.File
                 if (-not (Test-Path -LiteralPath $file)) { continue }
-                $ok = Import-MigRegistryFile -RegFile $file -OldRoot $m.Sorgente.HiveRoot -NewRoot $hive.Root -OldSID $m.Sorgente.SID -NewSID $target.SID -OldProfilePath $m.Sorgente.Percorso -NewProfilePath $target.Percorso -OldUserName $m.Sorgente.Utente -NewUserName $target.Nome
+                $excl = @()
+                if (-not $RestoreOutlookProfile) { $excl += '\\Outlook\\Profiles(\\|$)' }   # profilo MAPI: lascio che Outlook lo ricrei (autodiscover)
+                $ok = Import-MigRegistryFile -RegFile $file -OldRoot $m.Sorgente.HiveRoot -NewRoot $hive.Root -OldSID $m.Sorgente.SID -NewSID $target.SID -OldProfilePath $m.Sorgente.Percorso -NewProfilePath $target.Percorso -OldUserName $m.Sorgente.Utente -NewUserName $target.Nome -ExcludeKeyPatterns $excl
                 if ($ok) { $regOk++ } else { $regFail++; Write-MigLog -Level WARN -Message "Import registro fallito: $($rf.Chiave)" }
             }
             Write-MigLog -Level OK -Message "Registro: importate $regOk chiavi, $regFail fallite."
+            if (-not $RestoreOutlookProfile) { Write-MigLog -Level INFO -Message 'Outlook: profilo MAPI non importato di proposito (verra'' ricreato al primo avvio con autodiscover). Firme, PST, completamento automatico e impostazioni sono stati migrati.' }
         }
         $set = Join-Path $PackagePath 'Settings'
+        # Script "primo accesso": le connessioni a stampanti condivise e le unita' di rete sono PER UTENTE,
+        # quindi vanno create nella sessione dell'utente di destinazione, non in quella dell'amministratore che importa.
+        $firstLogon = New-Object System.Collections.Generic.List[string]
+        $firstLogon.Add('@echo off'); $firstLogon.Add('rem VM Migration Suite - operazioni al primo accesso (generato dall''importazione)')
         if ($RestoreWiFi -and (Test-Path -LiteralPath (Join-Path $set 'WiFi'))) {
             $n = 0
             foreach ($x in Get-ChildItem -LiteralPath (Join-Path $set 'WiFi') -Filter *.xml) { $o = & netsh.exe wlan add profile filename="$($x.FullName)" user=all 2>&1; if ($LASTEXITCODE -eq 0) { $n++ } }
@@ -852,25 +908,44 @@ function Start-MigImport {
                 Set-ItemProperty -LiteralPath $k -Name ConnectionType -Value 1 -Type DWord
                 Set-ItemProperty -LiteralPath $k -Name DeferFlags -Value 4 -Type DWord
             }
+            foreach ($d in $drives) { if ($d.Lettera -and $d.Percorso) { $firstLogon.Add(('net use {0}: "{1}" /persistent:yes >nul 2>&1' -f $d.Lettera.TrimEnd(':'), $d.Percorso)) } }
             Write-MigLog -Level OK -Message "Unita' di rete: $($drives.Count) mappature scritte (attive al prossimo accesso)."
         }
         if ($RestorePrinters -and (Test-Path -LiteralPath (Join-Path $set 'printers.json'))) {
             $pr = Get-Content -LiteralPath (Join-Path $set 'printers.json') -Raw | ConvertFrom-Json
             $n = 0
-            foreach ($np in @($pr.DiRete)) {
-                try { Add-Printer -ConnectionName $np -ErrorAction Stop; $n++ } catch { Write-MigLog -Level WARN -Message "Stampante di rete non aggiunta ($np): $($_.Exception.Message)" }
+            # 1. Driver esportati dal PC di origine -> driver store di questo PC
+            $drvRoot = Join-Path $set 'PrinterDrivers'
+            if (Test-Path -LiteralPath $drvRoot) {
+                foreach ($d in Get-ChildItem -LiteralPath $drvRoot -Directory) {
+                    $inf = Get-ChildItem -LiteralPath $d.FullName -Filter *.inf | Select-Object -First 1
+                    if ($inf) { $o = & pnputil.exe /add-driver "$($inf.FullName)" /install 2>&1; Write-MigLog ("Driver stampante {0}: pnputil codice {1}" -f $d.Name, $LASTEXITCODE) }
+                }
             }
-            foreach ($lp in @($pr.Locali | Where-Object { $_.IndirizzoIP })) {
+            # 2. Stampanti locali IP/WSD/USB
+            foreach ($lp in @($pr.Locali)) {
                 try {
-                    if (-not (Get-PrinterPort -Name $lp.Porta -ErrorAction SilentlyContinue)) { Add-PrinterPort -Name $lp.Porta -PrinterHostAddress $lp.IndirizzoIP -ErrorAction Stop }
-                    if (Get-PrinterDriver -Name $lp.Driver -ErrorAction SilentlyContinue) { Add-Printer -Name $lp.Nome -DriverName $lp.Driver -PortName $lp.Porta -ErrorAction Stop; $n++ }
-                    else { Write-MigLog -Level WARN -Message "Stampante IP '$($lp.Nome)': driver '$($lp.Driver)' non installato su questo PC. Porta $($lp.IndirizzoIP) creata; installare il driver e aggiungere la stampante." }
-                } catch { Write-MigLog -Level WARN -Message "Stampante IP '$($lp.Nome)': $($_.Exception.Message)" }
+                    if (-not (Get-PrinterDriver -Name $lp.Driver -ErrorAction SilentlyContinue)) {
+                        try { Add-PrinterDriver -Name $lp.Driver -ErrorAction Stop } catch { Write-MigLog -Level WARN -Message "Stampante '$($lp.Nome)': driver '$($lp.Driver)' non disponibile ($($_.Exception.Message)). Installare il driver del produttore e riaggiungere la stampante." ; continue }
+                    }
+                    if (Get-Printer -Name $lp.Nome -ErrorAction SilentlyContinue) { Write-MigLog "Stampante '$($lp.Nome)' gia' presente."; $n++; continue }
+                    $tp = $(if ($lp.PSObject.Properties['TipoPorta']) { $lp.TipoPorta } elseif ($lp.IndirizzoIP) { 'IP' } else { 'Altro' })
+                    switch ($tp) {
+                        'IP'  { if (-not (Get-PrinterPort -Name $lp.Porta -ErrorAction SilentlyContinue)) { Add-PrinterPort -Name $lp.Porta -PrinterHostAddress $lp.IndirizzoIP -ErrorAction Stop }
+                                Add-Printer -Name $lp.Nome -DriverName $lp.Driver -PortName $lp.Porta -ErrorAction Stop; $n++ }
+                        'USB' { Write-MigLog -Level INFO -Message "Stampante USB '$($lp.Nome)': driver installato; collegare la stampante e Windows la aggiungera' da sola." }
+                        'WSD' { Write-MigLog -Level INFO -Message "Stampante WSD '$($lp.Nome)': driver installato; aggiungerla da Impostazioni > Stampanti (viene rilevata in rete)." }
+                        default { Write-MigLog -Level WARN -Message "Stampante '$($lp.Nome)' su porta $($lp.Porta): tipo non ricreabile automaticamente." }
+                    }
+                } catch { Write-MigLog -Level WARN -Message "Stampante '$($lp.Nome)': $($_.Exception.Message)" }
             }
+            # 3. Stampanti condivise (per utente) + predefinita -> primo accesso
+            foreach ($np in @($pr.DiRete)) { $firstLogon.Add(('rundll32 printui.dll,PrintUIEntry /in /q /n "{0}"' -f $np)) }
             if ($pr.Predefinita) {
+                $firstLogon.Add(('rundll32 printui.dll,PrintUIEntry /y /q /n "{0}"' -f $pr.Predefinita))
                 try { Set-ItemProperty -LiteralPath "Registry::$($hive.Root)\Software\Microsoft\Windows NT\CurrentVersion\Windows" -Name Device -Value "$($pr.Predefinita),winspool,Ne00:" -ErrorAction Stop } catch {}
             }
-            Write-MigLog -Level OK -Message "Stampanti: $n aggiunte. Predefinita: $($pr.Predefinita)"
+            Write-MigLog -Level OK -Message ("Stampanti: {0} locali aggiunte ora, {1} condivise verranno collegate al primo accesso dell'utente. Predefinita: {2}" -f $n, @($pr.DiRete).Count, $pr.Predefinita)
         }
         if ($RestoreWallpaper) {
             $wpFile = Get-ChildItem -LiteralPath $set -Filter 'wallpaper.*' -ErrorAction SilentlyContinue | Where-Object { $_.Extension -ne '.json' } | Select-Object -First 1
@@ -882,6 +957,15 @@ function Start-MigImport {
                 Write-MigLog -Level OK -Message "Sfondo impostato: $destPic (visibile al prossimo accesso)."
             }
         }
+        if ($firstLogon.Count -gt 2) {
+            $flPath = Join-Path $target.Percorso 'VMIG-PrimoAccesso.cmd'
+            $firstLogon.Add(('del "%~f0" >nul 2>&1'))
+            [System.IO.File]::WriteAllLines($flPath, $firstLogon, (New-Object System.Text.UTF8Encoding($false)))
+            $ro = "Registry::$($hive.Root)\Software\Microsoft\Windows\CurrentVersion\RunOnce"
+            if (-not (Test-Path -LiteralPath $ro)) { New-Item -Path $ro -Force | Out-Null }
+            Set-ItemProperty -LiteralPath $ro -Name 'VMIG-PrimoAccesso' -Value ('cmd /c "' + $flPath + '"')
+            Write-MigLog -Level OK -Message ("Script primo accesso creato ({0} operazioni): stampanti condivise, predefinita e unita' di rete verranno collegate al primo login di {1}." -f ($firstLogon.Count - 3), $target.Nome)
+        }
     } catch { Write-MigLog -Level ERROR -Message "Registro/impostazioni: $($_.Exception.Message)" }
     finally { if ($hive) { Dismount-MigUserHive -Hive $hive } }
 
@@ -892,7 +976,8 @@ function Start-MigImport {
         Errori = @($results | Where-Object { -not $_.Ok } | ForEach-Object { $_.Relativo })
         Note = @(
             'Le password salvate nei browser (Chrome/Edge) sono cifrate con DPAPI del vecchio utente e NON sono recuperabili: usare la sincronizzazione account Google/Microsoft.',
-            'Le password di Outlook/posta e le credenziali di rete (Credential Manager) vanno reinserite.',
+            'Outlook: il profilo viene ricreato al primo avvio (autodiscover); gli account da configurare sono elencati in Settings\outlook-accounts.json. Firme, PST, completamento automatico e impostazioni sono gia'' al loro posto. Le password vanno reinserite.',
+            'Stampanti condivise, predefinita e unita'' di rete vengono collegate automaticamente al primo accesso dell''utente (script VMIG-PrimoAccesso.cmd via RunOnce).',
             'I programmi NON vengono installati: usare Settings\apps.csv come checklist o "winget import -i Settings\winget.json".',
             'Per vedere tutte le impostazioni, disconnettere e riconnettere l''utente di destinazione.'
         )

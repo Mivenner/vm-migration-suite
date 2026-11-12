@@ -66,6 +66,11 @@ Logs\              export.log, robocopy.log, import.log, import-report.json
 ```
 Il pacchetto è una cartella normale: si può ispezionare, copiare con qualunque mezzo o ripristinare a mano. **Contiene password Wi-Fi in chiaro**: trattarlo come riservato e cancellarlo a migrazione conclusa.
 
+## Stampanti e Outlook: come funzionano in v3.1
+- **Stampanti locali/IP**: il pacchetto driver viene esportato dal PC di origine (`Settings\PrinterDrivers\`, via `pnputil /export-driver`) e reinstallato sul nuovo PC; porta IP e stampante vengono ricreate. USB/WSD: driver installato, la stampante si aggiunge al collegamento/rilevamento.
+- **Stampanti condivise da server, predefinita, unità di rete**: sono *per utente*, quindi vengono collegate da `VMIG-PrimoAccesso.cmd` (RunOnce) **al primo accesso dell'utente di destinazione**, non durante l'importazione.
+- **Outlook**: per default il profilo MAPI **non** viene importato (si corrompe con OST mancante e credenziali DPAPI del vecchio utente): al primo avvio Outlook ricrea il profilo con autodiscover; gli account da configurare sono in `Settings\outlook-accounts.json`. Firme, PST, completamento automatico (RoamCache), modelli e impostazioni vengono migrati. Spuntare "Importa anche il profilo Outlook" solo tra PC con la stessa versione di Office.
+
 ## Cosa NON viene migrato (per design di Windows)
 - Password salvate in browser/Outlook/Credential Manager (DPAPI legata al vecchio account) → usare la sincronizzazione account o esportare dal browser prima.
 - Programmi: inventario in `Settings\apps.csv`; reinstallazione rapida con `winget import -i Settings\winget.json --accept-package-agreements`.

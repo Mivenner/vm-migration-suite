@@ -270,7 +270,7 @@ $WorkExport = {
 $WorkImport = {
     param($a)
     if ($a.NewUser) { New-MigLocalUser -Name $a.NewUser -Password $a.NewPassword -FullName $a.NewFullName -Administrator $a.NewAdmin | Out-Null; $a.Target = $a.NewUser }
-    return Start-MigImport -PackagePath $a.Pkg -TargetUser $a.Target -DataSetIds $a.DataSets -SkipNewer $a.SkipNewer -RestoreRegistry $a.Registry -RestoreWiFi $a.Wifi -RestorePrinters $a.Printers -RestoreDrives $a.Drives -RestoreWallpaper $a.Wallpaper -FixPermissions $a.Acl
+    return Start-MigImport -PackagePath $a.Pkg -TargetUser $a.Target -DataSetIds $a.DataSets -SkipNewer $a.SkipNewer -RestoreRegistry $a.Registry -RestoreWiFi $a.Wifi -RestorePrinters $a.Printers -RestoreDrives $a.Drives -RestoreWallpaper $a.Wallpaper -FixPermissions $a.Acl -RestoreOutlookProfile $a.OutlookProfile
 }
 $WorkReceive = {
     param($a)
@@ -337,7 +337,7 @@ function Start-Mode {
         'Import' {
             $pkg = $ui.txtImportPkg.Text.Trim()
             if (-not $pkg -or -not (Show-Manifest $pkg)) { [System.Windows.MessageBox]::Show('Seleziona un pacchetto valido.', 'VM Migration Suite') | Out-Null; return }
-            $opts = @{ Pkg = $pkg; DataSets = (Get-CheckedTags $ui.pnlImportSets); SkipNewer = [bool]$ui.chkImpSkipNewer.IsChecked; Registry = [bool]$ui.chkImpRegistry.IsChecked; Wifi = [bool]$ui.chkImpWifi.IsChecked; Printers = [bool]$ui.chkImpPrinters.IsChecked; Drives = [bool]$ui.chkImpDrives.IsChecked; Wallpaper = [bool]$ui.chkImpWallpaper.IsChecked; Acl = [bool]$ui.chkImpAcl.IsChecked }
+            $opts = @{ Pkg = $pkg; DataSets = (Get-CheckedTags $ui.pnlImportSets); SkipNewer = [bool]$ui.chkImpSkipNewer.IsChecked; Registry = [bool]$ui.chkImpRegistry.IsChecked; Wifi = [bool]$ui.chkImpWifi.IsChecked; Printers = [bool]$ui.chkImpPrinters.IsChecked; Drives = [bool]$ui.chkImpDrives.IsChecked; Wallpaper = [bool]$ui.chkImpWallpaper.IsChecked; Acl = [bool]$ui.chkImpAcl.IsChecked; OutlookProfile = [bool]$ui.chkImpOutlookProfile.IsChecked }
             if ($ui.rbTargetNew.IsChecked) {
                 $n = $ui.txtNewUser.Text.Trim()
                 if (-not $n -or $n -notmatch '^[^\\/:*?"<>|\[\]=,+;@]{1,20}$') { [System.Windows.MessageBox]::Show('Nome utente non valido (max 20 caratteri, senza simboli speciali).', 'VM Migration Suite') | Out-Null; return }
