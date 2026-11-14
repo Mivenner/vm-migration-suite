@@ -62,7 +62,8 @@ jobs:
           tag_name: latest
           name: "Ultima build (${{ env.VERSIONE }})"
           body: "Build automatica dall'ultimo commit su main. Link fissi: VMMigrationSuite_Portable.zip (exe + file, nessuna installazione) e VMMigrationSuite_Setup.exe (installer)."
-          prerelease: true
+          prerelease: false
+          make_latest: true
           files: |
             dist/VMMigrationSuite_Portable.zip
             dist/VMMigrationSuite_Setup.exe
