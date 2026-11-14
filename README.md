@@ -1,4 +1,18 @@
-# VM Migration Suite 3.0
+<!-- header -->
+<p align="center"><img src="logo.png" width="96" alt="vm technology"></p>
+<h1 align="center">VM Migration Suite</h1>
+<p align="center">Migrazione dei profili utente Windows 10/11 da un PC all'altro: dati, browser, Office, registro, Wi-Fi, stampanti e unità di rete. Via disco/USB o direttamente in LAN.</p>
+<p align="center">
+  <a href="https://github.com/Mivenner/vm-migration-suite/actions/workflows/build.yml"><img src="https://github.com/Mivenner/vm-migration-suite/actions/workflows/build.yml/badge.svg" alt="Build"></a>
+  <img src="https://img.shields.io/badge/Windows-10%20%7C%2011-0078D4" alt="Windows 10 | 11">
+  <img src="https://img.shields.io/badge/PowerShell-5.1%20%7C%207-5391FE" alt="PowerShell 5.1 | 7">
+</p>
+
+**Download dell'ultima build:** [Zip portable](https://github.com/Mivenner/vm-migration-suite/releases/latest/download/VMMigrationSuite_Portable.zip) · [Installer](https://github.com/Mivenner/vm-migration-suite/releases/latest/download/VMMigrationSuite_Setup.exe)
+
+Altri strumenti vm technology: [Migration Suite](https://github.com/Mivenner/vm-migration-suite) · [Health Check](https://github.com/Mivenner/vm-health-check) · [Setup Suite](https://github.com/Mivenner/vm-setup-suite) · [Printer Manager](https://github.com/Mivenner/vm-printer-manager)
+
+---
 
 Strumento interno **vm technology** per migrare profili utente Windows (10/11) fra PC: dati, browser, Office/Outlook, impostazioni di registro, Wi-Fi, stampanti, unità di rete, sfondo. Funziona su disco/USB/cartella di rete, via LAN con codice di accoppiamento, e da WinPE/Hiren's BootCD su dischi non avviati.
 
